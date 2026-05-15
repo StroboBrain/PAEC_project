@@ -5,19 +5,28 @@ This module contains the Network class, which represents a network, could be rep
 
 
 class Network_Handler:
-    def __init__(self, network_config):
-        self.network_config = network_config
+    def __init__(self, network: str):
+        # Entry point to use different networks
+        if network == "simulator":
+            self.network = Network_Simulator()
+        
 
-    
     
     def setup_network(self):
         # Simulate setting up the network based on the configuration
         pass
 
+
+class Message:
+    def __init__(self, sender, receiver, content):
+        self.sender = sender
+        self.receiver = receiver
+        self.content = content
+
+
 """
 Simple network simulator
 """
-
 class Network_Simulator:
     def __init__(self):
         self.user_list = []
@@ -35,5 +44,3 @@ class Network_Simulator:
     def receive_message(self, receiver):
         # Simulate receiving a message for the receiver
         pass
-
-    
