@@ -11,7 +11,9 @@ CONSTANTS
     POSSIBLE_REQUEST_IDs,       \* Requests to creater of item to change amount of item 
     
     NO_ITEM,                    \* placeholder for item ids that are not yet added to the list
-    NO_REQUEST                  \* placeholder for request ids that are not yet added to the list
+    NO_REQUEST,                 \* placeholder for request ids that are not yet added to the list
+    
+    ITEM_CREATOR                \* Restrict which user can create which item (rule out symetric cases in TLC)
     
 VARIABLES
     replicas, action_counter
@@ -73,6 +75,7 @@ Add_item ==
     \E actor \in POSSIBLE_USER_IDs :
     \E item_quantity \in POSSIBLE_ITEM_QUANTITIES :
         /\ ASSIGNED_REPLICA[actor] = rid
+        /\ ITEM_CREATOR[actor] = iid
         \* No other replica has item with same id (uniqueness, in real implementation use dynamic ids)
         /\ \A other_rid \in POSSIBLE_REPLICA_IDs : replicas[other_rid].recorded_items[iid] = NO_ITEM
         
@@ -393,5 +396,5 @@ FairSpec ==
 
 =============================================================================
 \* Modification History
-\* Last modified Fri May 15 11:56:56 CEST 2026 by floyd
+\* Last modified Fri May 15 12:20:43 CEST 2026 by floyd
 \* Created Thu May 14 11:09:59 CEST 2026 by floyd
