@@ -73,7 +73,7 @@ Add_item ==
     \E actor \in POSSIBLE_USER_IDs :
     \E item_quantity \in POSSIBLE_ITEM_QUANTITIES :
         /\ ASSIGNED_REPLICA[actor] = rid
-        \* No other replica has item with same id (uniqueness, in real implementation use dynamic ids
+        \* No other replica has item with same id (uniqueness, in real implementation use dynamic ids)
         /\ \A other_rid \in POSSIBLE_REPLICA_IDs : replicas[other_rid].recorded_items[iid] = NO_ITEM
         
         /\ LET new_item ==
@@ -98,7 +98,8 @@ Request_quantity_increase ==
     \E quantity \in POSSIBLE_ITEM_QUANTITIES :
         /\ ASSIGNED_REPLICA[actor] = rid
         /\ replicas[rid].recorded_items[iid] # NO_ITEM
-        /\ replicas[rid].recorded_requests[rrid] = NO_REQUEST
+        \* No other replica has request with same id (uniqueness, in real implementation use dynamic ids)
+        /\ \A other_rid \in POSSIBLE_REPLICA_IDs : replicas[other_rid].recorded_requests[rrid] = NO_REQUEST
         
         /\ LET new_request ==
                     [ id |-> rrid,
@@ -121,7 +122,8 @@ Request_quantity_decrease ==
     \E quantity \in POSSIBLE_ITEM_QUANTITIES :
         /\ ASSIGNED_REPLICA[actor] = rid
         /\ replicas[rid].recorded_items[iid] # NO_ITEM
-        /\ replicas[rid].recorded_requests[rrid] = NO_REQUEST
+        \* No other replica has request with same id (uniqueness, in real implementation use dynamic ids)
+        /\ \A other_rid \in POSSIBLE_REPLICA_IDs : replicas[other_rid].recorded_requests[rrid] = NO_REQUEST
         
         /\ LET new_request ==
                     [ id |-> rrid,
@@ -391,5 +393,5 @@ FairSpec ==
 
 =============================================================================
 \* Modification History
-\* Last modified Fri May 15 11:44:40 CEST 2026 by floyd
+\* Last modified Fri May 15 11:56:56 CEST 2026 by floyd
 \* Created Thu May 14 11:09:59 CEST 2026 by floyd
