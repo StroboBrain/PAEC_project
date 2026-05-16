@@ -24,10 +24,13 @@ class ShoppingListHandler:
             # TLA implementation
             self.id = item_id
             self.creator = creator
-            self.version = 0
+            self.version = 1
             self.delete_counter = 0
             # Implementation specific
             self.name = name
+        
+        def is_deleted(self):
+            return self.delete_counter % 2 == 1
     
     class Request():
         def __init__(self, request_id, sender, change_amount, processed = False):
@@ -43,5 +46,5 @@ class ShoppingListHandler:
         def __init__(self, replica_id, recorded_requests = []):
             self.id = replica_id
             self.recorded_requests = recorded_requests
+            self.request_to_process = False
             self.items = {} # item_id: Item
-            
