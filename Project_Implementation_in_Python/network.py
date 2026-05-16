@@ -9,8 +9,8 @@ class Network_Handler:
         
 class Message:
     def __init__(self, sender, receiver, content):
-        self.sender = sender
-        self.receiver = receiver
+        self.sender = sender # using the id
+        self.receiver = receiver # using the id
         self.content = content
 
 """
@@ -19,38 +19,37 @@ Simple network simulator. Takes the users from the user_handler
 class Network_Simulator:
     def __init__(self, user_handler):
         self.user_handler = user_handler
-        self.message_queue = []
+        self.messages = {}
     
-    def send_message(self, sender, receiver, message):
-        # Check if there is already a message for the receiver, if not create a new list, if yes append the message to the list
-        if self.message_storage.get(receiver) is None:
-            self.message_storage[receiver] = [message]
+    def send_message(self, sender, receiver, content):
+        if self.messages.get(receiver) is None:
+            self.messages[receiver] = [(sender, content)]
         else:
-            self.message_storage[receiver].append((sender, message))
-        pass
+            self.messages[receiver].append((sender, content))
 
-    def broad_cast_message(self, sender, message):
+        
+    def broad_cast_message(self, sender, content):
         for user in self.user_handler.getUsers():
-                self.send_message(sender, user.user_id, message)
+                self.send_message(sender, user.user_id, content)
     
-    def broad_cast_message_except_sender(self, sender, message):
+    def broad_cast_message_except_sender(self, sender, content):
         for user in self.user_handler.getUsers():
             if user.user_id != sender:
-                self.send_message(sender, user.user_id, message)
+                self.send_message(sender, user.user_id, content)
 
     def receive_message(self, receiver):
         # Simulate receiving a message for the receiver, return a list of messages for the receiver, if there are no messages return an empty list
-        if self.message_storage.get(receiver) is None:
+        if self.messages.get(receiver) is None:
             return []
         else:
-            messages = self.message_storage[receiver]
-            self.message_storage[receiver] = [] # Clear the messages
+            messages = self.messages[receiver]
+            self.messages[receiver] = [] # Clear the messages
             return messages
 
-    def send_message(self, sender, receiver, message):
-        # Simulate sending a message from sender to receiver
-        pass
-
-    def receive_message(self, receiver):
-        # Simulate receiving a message for the receiver
+    def send_message(self, sender, receiver, content):
+        # Check if there is already a message for the receiver
+        if self.messages.get(receiver) is None or len(self.messages[receiver]) == 0:
+            self.messages[receiver] = [(sender, content)]
+        else:
+            self.messages[receiver].append((sender, content))
         pass
