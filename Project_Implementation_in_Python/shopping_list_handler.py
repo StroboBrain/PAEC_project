@@ -44,21 +44,4 @@ class ShoppingListHandler:
             self.id = replica_id
             self.recorded_requests = recorded_requests
             self.items = {} # item_id: Item
-
-        def add_new_item(self, item_name, creator_id):
-            item_id = uuid.uuid4()
-            item = ShoppingListHandler.Item(item_id, creator_id, item_name)
-            self.items[item_id] = item
-
-        def create_replica(self):
-            replica_id = self.generate_id()
-            return self.Replica(replica_id, self, [])
-        
-        def generate_request(self, user, change_amount):
-            id = self.generate_id()
-            return self.Request(id, user, change_amount, False)
-        
-
-
-
             

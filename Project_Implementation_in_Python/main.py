@@ -1,6 +1,9 @@
+"""
+Implements the shopping list through a console interface
+"""
+
 from network import Network_Simulator
 from user_handler import UsersHandler
-
 
 # Singleton user handler
 user_handler = UsersHandler()

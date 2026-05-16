@@ -3,7 +3,7 @@ This module contains the Network classes, which represent a network.
 The simulator could later be replaced by a real network.
 """
 
-from message import Message
+from Project_Implementation_in_Python.message_parser import Message
 
 class Network_Handler:
     def __init__(self, network: str, user_handler):
