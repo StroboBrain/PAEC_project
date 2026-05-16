@@ -1,6 +1,8 @@
 """
 UserHandler is a singletion class 
 """
+import uuid
+
 from shopping_list_handler import ShoppingListHandler
 
 
@@ -11,14 +13,11 @@ class UsersHandler:
     default_items is a list of unique strings
     """
     def __init__(self):
-        self.next_users_id = 0 # user id is a unique integer that is incremented for each new user
         self.userlist = [] # List of user objects
         self.shopping_list_handler = ShoppingListHandler()
 
     def create_user(self, name):
-        # Simulate creating a user with a unique ID
-        user_id = self.next_users_id
-        self.next_users_id += 1
+        user_id = uuid.uuid4() 
         replica = self.shopping_list_handler.intialize_replica()
         user = User(name, user_id, replica)
         return user
