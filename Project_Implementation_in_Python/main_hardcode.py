@@ -5,6 +5,7 @@ Development class, to run with preset data
 from network import Network_Handler
 from user_handler import UsersHandler
 
+action_counter = 0
 # Singleton user handler
 user_handler = UsersHandler()
 user_handler.add_user("Alice")

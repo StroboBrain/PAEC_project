@@ -11,6 +11,14 @@ class ShoppingListHandler:
     def intialize_replica(self):
         return self.Replica(uuid.uuid4())
     
+    class ItemHandler:
+        def __init__():
+            pass
+        @staticmethod
+        def create_item(item_name, creator_id):
+            item_id = uuid.uuid4()
+            return ShoppingListHandler.Item(item_id, creator_id, item_name)
+        
     class Item:
         def __init__(self, item_id, creator, name):
             # TLA implementation
@@ -28,15 +36,18 @@ class ShoppingListHandler:
             self.change_amount = change_amount
             self.processed = processed
     
+    """
+    Each user has its own replica of the shopping list
+    """
     class Replica():
         def __init__(self, replica_id, recorded_requests = []):
             self.id = replica_id
             self.recorded_requests = recorded_requests
             self.items = {} # item_id: Item
 
-        def add_new_item(self, item_name):
+        def add_new_item(self, item_name, creator_id):
             item_id = uuid.uuid4()
-            item = ShoppingListHandler.Item(item_id, self.id, item_name)
+            item = ShoppingListHandler.Item(item_id, creator_id, item_name)
             self.items[item_id] = item
 
         def create_replica(self):
