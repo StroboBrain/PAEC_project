@@ -1,0 +1,51 @@
+{
+  "id": "9dbf5c86",
+  "recorded_items": {
+    "d654a079-dccd-4c8a-8766-28212949b9e4": {
+      "iid": "d654a079-dccd-4c8a-8766-28212949b9e4",
+      "name": "zahnb\u00fcrste",
+      "creator": "5eee0162",
+      "quantity": 10,
+      "version": 0,
+      "deleted_counter": 0
+    },
+    "6c588350-4a7f-4377-9db0-987a956dfe28": {
+      "iid": "6c588350-4a7f-4377-9db0-987a956dfe28",
+      "name": "banana",
+      "creator": "9dbf5c86",
+      "quantity": 1,
+      "version": 0,
+      "deleted_counter": 2
+    },
+    "7b306c54-7f89-4656-84db-139c0f0b7cfe": {
+      "iid": "7b306c54-7f89-4656-84db-139c0f0b7cfe",
+      "name": "apple",
+      "creator": "9dbf5c86",
+      "quantity": 0,
+      "version": 0,
+      "deleted_counter": 0
+    }
+  },
+  "recorded_requests": {
+    "2024ae71-bbfb-4555-98d6-65d28e943411": {
+      "rrid": "2024ae71-bbfb-4555-98d6-65d28e943411",
+      "name": "a",
+      "sender": "9dbf5c86",
+      "iid": "6c588350-4a7f-4377-9db0-987a956dfe28",
+      "change_amount": 19,
+      "processed": true
+    },
+    "7021a9ed-0509-4a1e-b436-8941d999e6e1": {
+      "rrid": "7021a9ed-0509-4a1e-b436-8941d999e6e1",
+      "name": "b",
+      "sender": "9dbf5c86",
+      "iid": "6c588350-4a7f-4377-9db0-987a956dfe28",
+      "change_amount": -2,
+      "processed": false
+    }
+  },
+  "known_users": {
+    "9dbf5c86": "alice",
+    "5eee0162": "bob"
+  }
+}
