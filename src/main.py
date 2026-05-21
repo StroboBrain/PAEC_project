@@ -6,7 +6,7 @@ from storage_provider import get_backend
 def handle_startup():
     backend = get_backend()
     os.system('cls' if os.name == 'nt' else 'clear')
-    print("Welcome to you shopping list!")
+    print("Welcome to your shopping list!")
     user_id = ""
 
     while True:
@@ -40,7 +40,6 @@ def handle_startup():
 
     print(f"Replica loaded for {username}. You can now start using the app.")
     return user_id
-
 
 if __name__ == "__main__":
     user_id = handle_startup()
