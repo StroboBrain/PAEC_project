@@ -4,12 +4,14 @@ EXTENDS Integers, FiniteSets
 CONSTANTS
     POSSIBLE_REPLICA_IDs,
     POSSIBLE_USER_IDs,
-    ASSIGNED_REPLICA,
+    ASSIGNED_REPLICA,           \* Users only operate on one replica
     
     POSSIBLE_ITEM_IDs,
     POSSIBLE_ITEM_QUANTITIES,   \* quantities by which a user can change the quantity of an item
+    POSSIBLE_REQUEST_IDs,       \* Requests to creater of item to change amount of item 
     
-    NO_ITEM     \* placeholder for item ids that are not yet added to the list
+    NO_ITEM,                    \* placeholder for item ids that are not yet added to the list
+    NO_REQUEST                  \* placeholder for request ids that are not yet added to the list
     
 VARIABLES
     replicas, action_counter
@@ -20,13 +22,21 @@ VARIABLES
 
 Item ==
     [id                     : POSSIBLE_ITEM_IDs,
-     added_quantities       : [POSSIBLE_USER_IDs -> Nat],
-     removed_quantities     : [POSSIBLE_USER_IDs -> Nat],
-     deleted_counter        : Nat  ] \* deleted is causal length counter
+     creator                : POSSIBLE_USER_IDs,
+     quantity               : Nat,                  \* Quantity changes via request, only creator can accept/deny
+     version                : Nat,                  \* Used only to track quantity of item
+     deleted_counter        : Nat  ]                \* deleted is causal length counter
+     
+Request ==
+    [id                     : POSSIBLE_REQUEST_IDs,
+     sender                 : POSSIBLE_USER_IDs,
+     change_amount          : Int,
+     processed              : BOOLEAN  ]            \* Used to ensure a request is only processed once (-> double counting)
      
 Replica ==
-    [id     : POSSIBLE_REPLICA_IDs,
-     recorded_items : [POSSIBLE_ITEM_IDs -> (Item \cup {NO_ITEM})]  ]
+    [id                     : POSSIBLE_REPLICA_IDs,
+     recorded_items         : [POSSIBLE_ITEM_IDs -> (Item \cup {NO_ITEM})],
+     recorded_requests      : [POSSIBLE_REQUEST_IDs -> (Request \cup {NO_REQUEST})]  ]
      
 
 \* ----------------------------
@@ -36,8 +46,9 @@ Replica ==
 Init == 
     /\ replicas = 
             [rid \in POSSIBLE_REPLICA_IDs |->
-                [id |-> rid,
-                 recorded_items |-> [iid \in POSSIBLE_ITEM_IDs |-> NO_ITEM]
+                [id                 |-> rid,
+                 recorded_items     |-> [iid \in POSSIBLE_ITEM_IDs |-> NO_ITEM],
+                 recorded_requests  |-> [rqid \in POSSIBLE_REQUEST_IDs |-> NO_REQUEST]
                 ]
             ]
     /\ action_counter = 0
@@ -47,28 +58,10 @@ Init ==
 \* Helper Functions
 \* ----------------------------
 
+\* Causal length logic
 Is_deleted(item) ==
     item.deleted_counter % 2 = 1
-    
-
-Sum(f, S) ==
-    LET RECURSIVE IterSum(_)
-        IterSum(subS) == IF subS = {} THEN 0
-                         ELSE LET x == CHOOSE x \in subS: TRUE
-                              IN f[x] + IterSum(subS \ {x})
-    IN IterSum(S)
-
-Get_quantity(item_id, replica) ==
-    LET item == replica.recorded_items[item_id]
-    IN IF item = NO_ITEM THEN 0
-       ELSE 
-         LET total_added   == Sum(item.added_quantities, POSSIBLE_USER_IDs)
-             total_removed == Sum(item.removed_quantities, POSSIBLE_USER_IDs)
-             raw_quantity  == total_added - total_removed
-         IN 
-            \* Return 0 if the subtraction results in a negative number
-            IF raw_quantity < 0 THEN 0 ELSE raw_quantity
-            
+               
             
 \* ----------------------------
 \* Item actions
@@ -78,14 +71,16 @@ Add_item ==
     \E iid \in POSSIBLE_ITEM_IDs :
     \E rid \in POSSIBLE_REPLICA_IDs :
     \E actor \in POSSIBLE_USER_IDs :
-    \E quantity \in POSSIBLE_ITEM_QUANTITIES :
+    \E item_quantity \in POSSIBLE_ITEM_QUANTITIES :
         /\ ASSIGNED_REPLICA[actor] = rid
+        \* No other replica has item with same id (uniqueness, in real implementation use dynamic ids)
         /\ \A other_rid \in POSSIBLE_REPLICA_IDs : replicas[other_rid].recorded_items[iid] = NO_ITEM
         
         /\ LET new_item ==
                 [ id |-> iid,
-                  added_quantities |-> [uid \in POSSIBLE_USER_IDs |-> IF uid = actor THEN quantity ELSE 0],
-                  removed_quantities |-> [uid \in POSSIBLE_USER_IDs |-> 0],
+                  creator |-> actor,
+                  quantity |-> item_quantity,
+                  version |-> 1,
                   deleted_counter |-> 0
                 ]
               new_replica ==
@@ -95,28 +90,106 @@ Add_item ==
                 /\ action_counter' = action_counter + 1
                 
                 
-Increase_quantity ==
+Request_quantity_increase ==
     \E iid \in POSSIBLE_ITEM_IDs :
     \E rid \in POSSIBLE_REPLICA_IDs :
+    \E rrid \in POSSIBLE_REQUEST_IDs :
     \E actor \in POSSIBLE_USER_IDs :
     \E quantity \in POSSIBLE_ITEM_QUANTITIES :
         /\ ASSIGNED_REPLICA[actor] = rid
         /\ replicas[rid].recorded_items[iid] # NO_ITEM
+        \* No other replica has request with same id (uniqueness, in real implementation use dynamic ids)
+        /\ \A other_rid \in POSSIBLE_REPLICA_IDs : replicas[other_rid].recorded_requests[rrid] = NO_REQUEST
         
-        /\ replicas' = [replicas EXCEPT ![rid].recorded_items[iid].added_quantities[actor] = @ + quantity]
-        /\ action_counter' = action_counter + 1  
+        /\ LET new_request ==
+                    [ id |-> rrid,
+                      sender |-> actor,
+                      change_amount |-> quantity,
+                      processed |-> FALSE
+                    ]
+                new_replica ==
+                    [ replicas[rid] EXCEPT !.recorded_requests = [@ EXCEPT ![rrid] = new_request]]
+           IN 
+                /\ replicas' = [replicas EXCEPT ![rid] = new_replica]
+                /\ action_counter' = action_counter + 1
+                
+                
+Request_quantity_decrease ==
+    \E iid \in POSSIBLE_ITEM_IDs :
+    \E rid \in POSSIBLE_REPLICA_IDs :
+    \E rrid \in POSSIBLE_REQUEST_IDs :
+    \E actor \in POSSIBLE_USER_IDs :
+    \E quantity \in POSSIBLE_ITEM_QUANTITIES :
+        /\ ASSIGNED_REPLICA[actor] = rid
+        /\ replicas[rid].recorded_items[iid] # NO_ITEM
+        \* No other replica has request with same id (uniqueness, in real implementation use dynamic ids)
+        /\ \A other_rid \in POSSIBLE_REPLICA_IDs : replicas[other_rid].recorded_requests[rrid] = NO_REQUEST
         
+        /\ LET new_request ==
+                    [ id |-> rrid,
+                      sender |-> actor,
+                      change_amount |-> quantity * (-1),
+                      processed |-> FALSE
+                    ]
+                new_replica ==
+                    [ replicas[rid] EXCEPT !.recorded_requests = [@ EXCEPT ![rrid] = new_request]]
+           IN 
+                /\ replicas' = [replicas EXCEPT ![rid] = new_replica]
+                /\ action_counter' = action_counter + 1
+                
 
-Decrease_quantity ==
+\* Accept quantitiy change requst if quantity won't go negative                
+Accept_request ==
     \E iid \in POSSIBLE_ITEM_IDs :
     \E rid \in POSSIBLE_REPLICA_IDs :
+    \E rrid \in POSSIBLE_REQUEST_IDs :
     \E actor \in POSSIBLE_USER_IDs :
-    \E quantity \in POSSIBLE_ITEM_QUANTITIES :
         /\ ASSIGNED_REPLICA[actor] = rid
         /\ replicas[rid].recorded_items[iid] # NO_ITEM
+        /\ replicas[rid].recorded_items[iid].creator = actor
+        /\ replicas[rid].recorded_requests[rrid] # NO_REQUEST
+        /\ replicas[rid].recorded_requests[rrid].processed = FALSE
         
-        /\ replicas' = [replicas EXCEPT ![rid].recorded_items[iid].removed_quantities[actor] = @ + quantity]
-        /\ action_counter' = action_counter + 1          
+        /\ (replicas[rid].recorded_items[iid].quantity + replicas[rid].recorded_requests[rrid].change_amount) >= 0
+        /\ LET 
+               current_item == replicas[rid].recorded_items[iid]
+               current_req  == replicas[rid].recorded_requests[rrid]
+
+               new_item ==
+                    [ current_item EXCEPT !.quantity = @ + current_req.change_amount,
+                                          !.version = @ + 1]
+               new_request ==
+                    [ current_req EXCEPT !.processed = TRUE ]
+               new_replica ==
+                    [ replicas[rid] EXCEPT !.recorded_items[iid] = new_item,
+                                           !.recorded_requests[rrid] = new_request ]
+           IN 
+                /\ replicas' = [replicas EXCEPT ![rid] = new_replica]
+                /\ action_counter' = action_counter + 1
+                
+
+\* Deny quantity change request (for any reason)         
+Deny_request ==
+    \E iid \in POSSIBLE_ITEM_IDs :
+    \E rid \in POSSIBLE_REPLICA_IDs :
+    \E rrid \in POSSIBLE_REQUEST_IDs :
+    \E actor \in POSSIBLE_USER_IDs :
+        /\ ASSIGNED_REPLICA[actor] = rid
+        /\ replicas[rid].recorded_items[iid] # NO_ITEM
+        /\ replicas[rid].recorded_items[iid].creator = actor
+        /\ replicas[rid].recorded_requests[rrid] # NO_REQUEST
+        /\ replicas[rid].recorded_requests[rrid].processed = FALSE
+        
+        /\ LET 
+               current_req  == replicas[rid].recorded_requests[rrid]
+               
+               new_request ==
+                    [ current_req EXCEPT !.processed = TRUE ]
+               new_replica ==
+                    [ replicas[rid] EXCEPT !.recorded_requests[rrid] = new_request ]
+           IN 
+                /\ replicas' = [replicas EXCEPT ![rid] = new_replica]
+                /\ action_counter' = action_counter + 1        
                 
                 
 Delete_item ==
@@ -148,29 +221,41 @@ Reinstate_item ==
 \* ----------------------------
 
 Merge_item(item_own, item_other) ==
+    \* If only one replica has the item with id keep this one
     IF item_own = NO_ITEM /\ item_other = NO_ITEM
     THEN NO_ITEM
     ELSE IF item_own # NO_ITEM /\ item_other = NO_ITEM
     THEN item_own
     ELSE IF item_own = NO_ITEM /\ item_other # NO_ITEM
     THEN item_other
+    \* If both replicas have item with id apply merge logic
     ELSE
         LET 
-            merged_added == [ u \in POSSIBLE_USER_IDs |-> 
-                            CHOOSE n \in {item_own.added_quantities[u], item_other.added_quantities[u]} :
-                                       n >= item_own.added_quantities[u] /\ n >= item_other.added_quantities[u] ]
+            \* Determine which record holds the most recent version for quantity
+            higher_version_item == IF item_own.version >= item_other.version 
+                                   THEN item_own 
+                                   ELSE item_other
             
-            merged_removed == [ u \in POSSIBLE_USER_IDs |-> 
-                            CHOOSE n \in {item_own.removed_quantities[u], item_other.removed_quantities[u]} :
-                                       n >= item_own.removed_quantities[u] /\ n >= item_other.removed_quantities[u] ]
-            
+            \* Delete is concurrently updated independent of the version logic (use cls merge)
             merged_deleted == CHOOSE n \in {item_own.deleted_counter, item_other.deleted_counter} :
-                                        n >= item_own.deleted_counter /\ n >= item_other.deleted_counter
+                                    n >= item_own.deleted_counter /\ n >= item_other.deleted_counter
         IN
-            [ item_own EXCEPT !.added_quantities = merged_added,
-                              !.removed_quantities = merged_removed,
+            [ item_own EXCEPT !.quantity        = higher_version_item.quantity,
+                              !.version         = higher_version_item.version,
                               !.deleted_counter = merged_deleted ]
 
+
+Merge_request(req_own, req_other) ==
+    IF req_own = NO_REQUEST /\ req_other = NO_REQUEST
+    THEN NO_REQUEST
+    ELSE IF req_own # NO_REQUEST /\ req_other = NO_REQUEST
+    THEN req_own
+    ELSE IF req_own = NO_ITEM /\ req_other # NO_REQUEST
+    THEN req_other
+    ELSE IF req_own = NO_REQUEST /\ req_other # NO_REQUEST
+    THEN req_other
+    ELSE  \* Prefer true in merges
+        [ req_own EXCEPT !.processed = req_own.processed \/ req_other.processed ]
 
 \* ----------------------------
 \* Merge action
@@ -180,13 +265,19 @@ Merge_replicas ==
     \E own_rid, other_rid \in POSSIBLE_REPLICA_IDs :
         /\ own_rid /= other_rid
         /\ LET 
-               own_items   == replicas[own_rid].recorded_items
-               other_items == replicas[other_rid].recorded_items
+               own_items    == replicas[own_rid].recorded_items
+               other_items   == replicas[other_rid].recorded_items
+               own_requests  == replicas[own_rid].recorded_requests
+               other_requests == replicas[other_rid].recorded_requests
                
                merged_recorded_items == [ iid \in POSSIBLE_ITEM_IDs |-> 
                    Merge_item(own_items[iid], other_items[iid]) ]
+               
+               merged_recorded_requests == [ rrid \in POSSIBLE_REQUEST_IDs |-> 
+                   Merge_request(own_requests[rrid], other_requests[rrid]) ]
            IN
-               /\ replicas' = [replicas EXCEPT ![own_rid].recorded_items = merged_recorded_items]
+               /\ replicas' = [replicas EXCEPT ![own_rid].recorded_items = merged_recorded_items,
+                                              ![own_rid].recorded_requests = merged_recorded_requests]
                /\ UNCHANGED action_counter
 
 
@@ -196,8 +287,10 @@ Merge_replicas ==
 
 Next ==
     \/ Add_item
-    \/ Increase_quantity
-    \/ Decrease_quantity
+    \/ Request_quantity_increase
+    \/ Request_quantity_decrease
+    \/ Deny_request
+    \/ Accept_request
     \/ Delete_item
     \/ Reinstate_item
     \/ Merge_replicas
@@ -211,36 +304,19 @@ Next ==
 TypeOK ==
     \A rid \in POSSIBLE_REPLICA_IDs :
         /\ replicas[rid].recorded_items \in [POSSIBLE_ITEM_IDs -> (Item \cup {NO_ITEM}) ]
+        /\ replicas[rid].recorded_requests \in [POSSIBLE_REQUEST_IDs -> (Request \cup {NO_REQUEST}) ]
         
         
 Quantities_non_negative ==
     \A rid \in POSSIBLE_REPLICA_IDs :
     \A iid \in POSSIBLE_ITEM_IDs :
         replicas[rid].recorded_items[iid] # NO_ITEM =>
-            Get_quantity(iid, replicas[rid]) >= 0
+            replicas[rid].recorded_items[iid].quantity >= 0
             
             
 \* ----------------------------
 \* Safety Helpers
 \* ----------------------------
-
-\* The total added quantity for any user only increases or stays the same
-No_decrease_added_quantities ==
-    \A rid \in POSSIBLE_REPLICA_IDs, iid \in POSSIBLE_ITEM_IDs, u \in POSSIBLE_USER_IDs :
-        (replicas[rid].recorded_items[iid] # NO_ITEM)
-        =>
-        /\ replicas'[rid].recorded_items[iid] # NO_ITEM
-        /\ replicas'[rid].recorded_items[iid].added_quantities[u]
-            >= replicas[rid].recorded_items[iid].added_quantities[u]
-
-\* The total removed quantity for any user only increases or stays the same
-No_decrease_removed_quantities ==
-    \A rid \in POSSIBLE_REPLICA_IDs, iid \in POSSIBLE_ITEM_IDs, u \in POSSIBLE_USER_IDs :
-        (replicas[rid].recorded_items[iid] # NO_ITEM)
-        =>
-        /\ replicas'[rid].recorded_items[iid] # NO_ITEM
-        /\ replicas'[rid].recorded_items[iid].removed_quantities[u]
-            >= replicas[rid].recorded_items[iid].removed_quantities[u]
 
 \* The causal length counter for deletion/reinstate only increases
 No_decrease_deleted_counter ==
@@ -253,15 +329,10 @@ No_decrease_deleted_counter ==
             
 
 \* ----------------------------
-\* Safety
+\* Additional Safety
 \* ----------------------------
-          
-Safety_added_quantities_non_decreasing ==
-    [] [ No_decrease_added_quantities ]_{<<replicas, action_counter>>}
 
-Safety_removed_quantities_non_decreasing ==
-    [] [ No_decrease_removed_quantities ]_{<<replicas, action_counter>>}
-
+\* Monotinic growth of causal length counter
 Safety_deleted_counter_non_decreasing ==
     [] [ No_decrease_deleted_counter ]_{<<replicas, action_counter>>}
     
@@ -270,15 +341,10 @@ Safety_deleted_counter_non_decreasing ==
 \* Liveness helpers
 \* ----------------------------
 
-All_replicas_have_at_least_added_quantity(iid, user, counter) ==
+All_replicas_have_at_least_item_version(iid, version) ==
     \A rid \in POSSIBLE_REPLICA_IDs :
-        /\ replicas[rid].recorded_items[iid] # NO_ITEM
-        /\ replicas[rid].recorded_items[iid].added_quantities[user] >= counter
-
-All_replicas_have_at_least_removed_quantity(iid, user, counter) ==
-    \A rid \in POSSIBLE_REPLICA_IDs :
-        /\ replicas[rid].recorded_items[iid] # NO_ITEM
-        /\ replicas[rid].recorded_items[iid].removed_quantities[user] >= counter
+        /\ replicas[rid].recorded_items[iid] /= NO_ITEM
+        /\ replicas[rid].recorded_items[iid].version >= version
 
 All_replicas_have_at_least_deleted_counter(iid, counter) ==
     \A rid \in POSSIBLE_REPLICA_IDs :
@@ -294,18 +360,15 @@ All_replicas_have_item(iid) ==
 \* Liveness
 \* ----------------------------
 
-\* 1. Always eventually all replicas need to agree on the quantities of each item
-Liveness_Added_quantities_propagate ==
-    \A rid \in POSSIBLE_REPLICA_IDs, iid \in POSSIBLE_ITEM_IDs, user \in POSSIBLE_USER_IDs :
-        []<>(replicas[rid].recorded_items[iid] # NO_ITEM
-            => All_replicas_have_at_least_added_quantity(iid, user, replicas[rid].recorded_items[iid].added_quantities[user]))
+\* 1. Always eventually all replicas need to catch up to the latest version of an item,
+\*    so most recent quantity updates reach every replica
+Liveness_versions_propagate ==
+    \A rid \in POSSIBLE_REPLICA_IDs, iid \in POSSIBLE_ITEM_IDs :
+        []<>(replicas[rid].recorded_items[iid] /= NO_ITEM
+            => All_replicas_have_at_least_item_version(iid, replicas[rid].recorded_items[iid].version))
 
-Liveness_Removed_quantities_propagate ==
-    \A rid \in POSSIBLE_REPLICA_IDs, iid \in POSSIBLE_ITEM_IDs, user \in POSSIBLE_USER_IDs :
-        []<>(replicas[rid].recorded_items[iid] # NO_ITEM
-            => All_replicas_have_at_least_removed_quantity(iid, user, replicas[rid].recorded_items[iid].removed_quantities[user]))
-
-\* 2. Always eventually all replicas need to agree if an item is present/removed
+\* 2. Always eventually all replicas need to agree if an item is present/removed;
+\*    This is independend from the version as we allow concurrent add/remove
 Liveness_Deletion_state_propagates ==
     \A rid \in POSSIBLE_REPLICA_IDs, iid \in POSSIBLE_ITEM_IDs :
         []<>(replicas[rid].recorded_items[iid] # NO_ITEM
@@ -330,5 +393,5 @@ FairSpec ==
 
 =============================================================================
 \* Modification History
-\* Last modified Thu May 14 13:08:35 CEST 2026 by floyd
+\* Last modified Fri May 15 11:56:56 CEST 2026 by floyd
 \* Created Thu May 14 11:09:59 CEST 2026 by floyd
