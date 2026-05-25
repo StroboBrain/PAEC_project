@@ -1,0 +1,22 @@
+===========================================================================
+                         COMBINED SIMULATION REPORT                        
+===========================================================================
+Execution Status:      SUCCESS (Combined 8 files)
+Runs Completed:        100000 / 100000
+Steps per run:         1000
+Total Elapsed Time:    81081.366 seconds
+Average Run Time:      0.811 seconds/run
+Average Created Items: 127.1
+Average Created Requests: 123.4
+---------------------------------------------------------------------------
+Action Name                   | Passed       | Failed       | Success Rate
+---------------------------------------------------------------------------
+create_item                   | 12492606     | 0            | 100.0%
+create_request                | 12210777     | 0            | 100.0%
+delete_item                   | 8275433      | 3931458      | 67.8%
+merge                         | 25005166     | 0            | 100.0%
+process_request_accept        | 674354       | 11247248     | 5.7%
+process_request_deny          | 676180       | 11243900     | 5.7%
+reinstate_item                | 3931167      | 8283687      | 32.2%
+===========================================================================
+
