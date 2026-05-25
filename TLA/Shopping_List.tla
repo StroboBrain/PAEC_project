@@ -327,6 +327,23 @@ No_decrease_deleted_counter ==
         /\ replicas'[rid].recorded_items[iid].deleted_counter
             >= replicas[rid].recorded_items[iid].deleted_counter
             
+\* The version counter for items only increases
+No_decrease_version_counter ==
+    \A rid \in POSSIBLE_REPLICA_IDs, iid \in POSSIBLE_ITEM_IDs :
+        (replicas[rid].recorded_items[iid] # NO_ITEM)
+        =>
+        /\ replicas'[rid].recorded_items[iid] # NO_ITEM
+        /\ replicas'[rid].recorded_items[iid].version
+            >= replicas[rid].recorded_items[iid].version
+            
+\* Processed requests stay processed
+Processed_requests_terminal ==
+    \A rid \in POSSIBLE_REPLICA_IDs, rrid \in POSSIBLE_REQUEST_IDs :
+        (replicas[rid].recorded_requests[rrid] # NO_REQUEST /\ replicas[rid].recorded_requests[rrid].processed = TRUE)
+        =>
+        /\ replicas'[rid].recorded_requests[rrid] # NO_REQUEST
+        /\ replicas'[rid].recorded_requests[rrid].processed = TRUE
+            
 
 \* ----------------------------
 \* Additional Safety
@@ -335,6 +352,15 @@ No_decrease_deleted_counter ==
 \* Monotinic growth of causal length counter
 Safety_deleted_counter_non_decreasing ==
     [] [ No_decrease_deleted_counter ]_{<<replicas, action_counter>>}
+    
+\* Monotinic growth of version counter
+Safety_version_counter_non_decreasing ==
+    [] [ No_decrease_version_counter ]_{<<replicas, action_counter>>}   
+    
+\* Processed requests terminal
+Safety_processed_requests_terminal ==
+    [] [ Processed_requests_terminal ]_{<<replicas, action_counter>>}   
+    
     
     
 \* ----------------------------
@@ -393,5 +419,5 @@ FairSpec ==
 
 =============================================================================
 \* Modification History
-\* Last modified Fri May 15 11:56:56 CEST 2026 by floyd
+\* Last modified Mon May 25 08:57:52 CEST 2026 by floyd
 \* Created Thu May 14 11:09:59 CEST 2026 by floyd
