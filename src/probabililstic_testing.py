@@ -235,7 +235,7 @@ def create_request_action(rdm, actor):
 def process_request_accept_action(rdm, actor):
     replica = backend.get_full_replica(actor) or {}
     reqs = replica.get("recorded_requests", {}) or {}
-    pending = [rrid for rrid, r in reqs.items() if r and not r.get("processed", True)]
+    pending = [rrid for rrid, _ in reqs.items()]
     if not pending:
         return 0
     
@@ -246,7 +246,7 @@ def process_request_accept_action(rdm, actor):
 def process_request_deny_action(rdm, actor):
     replica = backend.get_full_replica(actor) or {}
     reqs = replica.get("recorded_requests", {}) or {}
-    pending = [rrid for rrid, r in reqs.items() if r and not r.get("processed", False)]
+    pending = [rrid for rrid, _ in reqs.items()]
     if not pending:
         return 0
     
@@ -257,7 +257,7 @@ def process_request_deny_action(rdm, actor):
 def delete_item_action(rdm, actor):
     replica = backend.get_full_replica(actor) or {}
     items = replica.get("recorded_items", {}) or {}
-    iids = [iid for iid, it in items.items()]
+    iids = [iid for iid, _ in items.items()]
     if not iids:
         return 0
     
@@ -268,7 +268,7 @@ def delete_item_action(rdm, actor):
 def reinstate_item_action(rdm, actor):
     replica = backend.get_full_replica(actor) or {}
     items = replica.get("recorded_items", {}) or {}
-    iids = [iid for iid, it in items.items()]
+    iids = [iid for iid, _ in items.items()]
     if not iids:
         return 0
     
