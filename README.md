@@ -1,4 +1,4 @@
-# Repo for PAEC Project: Shopping List
+# Repo for PAEC Project: Distributed Shopping List Replicart
 
 A distributed shopping list system with formal TLA+ specification and a Python CLI implementation with probabilistic testing framework.
 
