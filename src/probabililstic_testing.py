@@ -38,7 +38,6 @@ def _setup():
     clear_replicas(users)
 
 def clear_replicas(users_list: list):
-    """Sets up clean tracking structures for all users; used for each run."""
     all_user_ids = [f"user{i}" for i in range(NUM_USERS)]
     for i in range(NUM_USERS):
         user_id = f"user{i}"
@@ -56,7 +55,6 @@ def clear_replicas(users_list: list):
 # ==========================================
 
 def invariant_non_negative_quantities(replica: dict) -> Tuple[bool, str]:
-    """Ensures no state manipulation causes quantities to drop below 0."""
     items = replica.get("recorded_items", {}) or {}
     for iid, item in items.items():
         if not item:
@@ -83,7 +81,6 @@ def check_invariants(replica: dict) -> Tuple[bool, List[str]]:
 # ==========================================
 
 def temporal_monotonically_growing_item_versions(old_state: dict, new_state: dict) -> Tuple[bool, str]:
-    """Guarantees item sequential modifications never regress versions backwards."""
     old_items = old_state.get("recorded_items", {}) or {}
     new_items = new_state.get("recorded_items", {}) or {}
     
@@ -97,7 +94,6 @@ def temporal_monotonically_growing_item_versions(old_state: dict, new_state: dic
     return True, ""
 
 def temporal_monotonically_growing_deletion_counters(old_state: dict, new_state: dict) -> Tuple[bool, str]:
-    """Guarantees deletion tombstone vector states only grow upwards or stay flat."""
     old_items = old_state.get("recorded_items", {}) or {}
     new_items = new_state.get("recorded_items", {}) or {}
     
@@ -108,7 +104,6 @@ def temporal_monotonically_growing_deletion_counters(old_state: dict, new_state:
     return True, ""
 
 def temporal_processed_requests_are_terminal(old_state: dict, new_state: dict) -> Tuple[bool, str]:
-    """Ensures once a request is processed (True), it cannot become unprocessed (False)."""
     old_reqs = old_state.get("recorded_requests", {}) or {}
     new_reqs = new_state.get("recorded_requests", {}) or {}
     
