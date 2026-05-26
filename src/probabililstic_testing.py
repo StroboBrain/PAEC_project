@@ -435,7 +435,7 @@ if __name__ == "__main__":
         report_output.append(f"{act:<28} | {passed_val:<12} | {failed_val:<12} | {rate_str:<12}")
         
     report_output.append("=" * 75)
-
+    print("\n")
     final_report_string = "\n".join(report_output)
     print(final_report_string)
 
@@ -446,3 +446,4 @@ if __name__ == "__main__":
         out_file.write(final_report_string)
         
     print(f"Results saved to: {filename}")
+    
