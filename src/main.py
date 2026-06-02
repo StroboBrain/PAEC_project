@@ -6,13 +6,14 @@ from storage_provider import get_backend
 def handle_startup():
     backend = get_backend()
     os.system('cls' if os.name == 'nt' else 'clear')
-    print("Welcome to your shopping list!")
+    print("Welcome to Replicart - Your local-first shopping list")
+
     user_id = ""
 
     while True:
         print("\nOptions: \n1. Login\n2. Register\n3. Exit")
         choice = input("Choose an option: ").strip()
-        if choice == "1" or choice == "login" or choice == "Login":
+        if choice == "1" or choice == "login" or choice == "Login" or choice == "Log" or choice == "log":
             result = UserManager.login_user()
             if result:
                 username, user_id = result
